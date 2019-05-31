@@ -14,13 +14,13 @@ path = {}
 
 path["haplotypo"] = "~/src/haplotypo/bin/"
 path["java"] = "java" 
-path["bwa"] = "bwa" 
-path["samtools"] = "samtools" 
+path["bwa"] = "~/src/haplotypo/dependencies/bwa-0.7.15/bwa" 
+path["samtools"] = "~/src/haplotypo/dependencies/samtools-1.9/samtools" 
 path["picard"] = "~/src/haplotypo/dependencies/gatk-4.0.12.0/gatk"
 path["gatk"] = "~/src/haplotypo/dependencies/gatk-4.0.12.0/gatk-package-4.0.12.0-local.jar" 
-path["freebayes"] = "freebayes "
-path["bcftools"] = "bcftools" 
-path["vcffilter"] = "vcffilter"
+path["freebayes"] = "~/src/haplotypo/dependencies/freebayes/bin/freebayes "
+path["bcftools"] = "~/src/haplotypo/dependencies/bcftools-1.9/bcftools" 
+path["vcffilter"] = "~/src/haplotypo/dependencies/vcflib/bin/vcffilter"
 
 def program_path(program):
 	return path[program]
