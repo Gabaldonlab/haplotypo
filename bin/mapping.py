@@ -16,7 +16,6 @@ from programs_config import program_path
 #Setting the correct path for each program
 bwa = program_path("bwa")
 picard = program_path("picard")
-samtools = program_path("samtools")
 
 ##############
 #### MAIN ####

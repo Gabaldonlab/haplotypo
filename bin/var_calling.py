@@ -15,7 +15,6 @@ from programs_config import program_path
 
 #Setting the correct path for each program
 java = program_path("java")
-bwa = program_path("bwa")
 samtools = program_path("samtools")
 picard = program_path("picard")
 gatk = program_path("gatk")

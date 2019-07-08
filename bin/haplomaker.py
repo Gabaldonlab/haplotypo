@@ -71,11 +71,12 @@ def haploMaker(fasta,vcf):
 			l = line.split("\t")
 			chrm = l[0]
 			pos = l[1]
+				
 			initial = l[3]
 			alt = l[4]
-			
+				
 			infor = initial,alt
-			
+				
 			if chrm not in alt_nucl.keys():
 				alt_nucl[chrm] = {}
 				pos_order_chromosome[chrm] = []

@@ -9,7 +9,7 @@ Created on Wed Jul 11 12:45:14 2018
 import argparse, vcf, re, random, sys,os
 from Bio import SeqIO
 
-parser = argparse.ArgumentParser(description="Pipeline to obtain corrected VCF files for haplotypes A and B from their filtered VCFs. It requires pyVCF. WARNING: chromosome Id must be /(chr.{1}).*/; ex: chrRA")
+parser = argparse.ArgumentParser(description="Pipeline to obtain corrected VCF files for haplotypes A and B from their filtered VCFs. It requires pyVCF. WARNING: chromosome Id must be /(chr.*?)_.*/; ex: chrRA")
 
 parser.add_argument("-A", "--VCF_A", dest="VCF_A", required=True, help="VCF with PASS SNPs obtained after running a variant caller using HapA as reference")
 parser.add_argument("-B", "--VCF_B", dest="VCF_B", required=True, help="VCF with PASS SNPs obtained after running a variant caller using HapB as reference")
@@ -64,8 +64,11 @@ def read_vcf(VCF_raw):
     vcf_reader = vcf.Reader(open(VCF_raw, 'r'))
     for record in vcf_reader:
         #print record.CHROM,record.POS,record.ID,record.REF,record.ALT,record.QUAL,record.FILTER,record.INFO,record.samples
-        m = re.search('(chr.{1}).*', record.CHROM)
+        m = re.search('(chr.*?)_.*', record.CHROM)
         mychr=m.group(1)
+        #print mychr,record.POS
+        if not mychr:
+            print "WARNING! Chromosome Id must be /(chr.*?)_.*/; ex: chr1_A; chr1_B; please check! ;)"
         key= "%s_%s" % (mychr,record.POS)
         val= record
         if not key in vcf_dict:
@@ -80,9 +83,9 @@ def read_vcfDiffCoord(VCF_raw,haplotype):
         coord=[]
         for line in open(coordinatesTable, 'r'):
             line = line.rstrip().split('\t')
-            m = re.search('(chr.{1}).*', line[0])
+            m = re.search('(chr.*?)_.*', line[0])
             chrA=m.group(1)
-            m = re.search('(chr.{1}).*', line[1])
+            m = re.search('(chr.*?)_.*', line[1])
             chrB=m.group(1)
             coord.append([chrA,chrB,line[2],line[3]]) #to save the coordinates in a list of lists
 
@@ -90,7 +93,7 @@ def read_vcfDiffCoord(VCF_raw,haplotype):
     vcf_reader = vcf.Reader(open(VCF_raw, 'r'))
     for record in vcf_reader:
         #print record.CHROM,record.POS,record.ID,record.REF,record.ALT,record.QUAL,record.FILTER,record.INFO,record.samples
-        m = re.search('(chr.{1}).*', record.CHROM)
+        m = re.search('(chr.*?)_.*', record.CHROM)
         mychr=m.group(1)
         newPos=int()
         found=0
@@ -173,11 +176,18 @@ def getRefNcl(key1,haplotype):
     chrPos=key1.split('_')
     if haplotype == 'A':
         for seq_record in SeqIO.parse(fasta_B, "fasta"):
-            if seq_record.id =='%s_B'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
+            m = re.search('chr.*?_(.*)', seq_record.id)
+            tag=m.group(1)
+            #print 'tag A:',tag
+            if seq_record.id == '%s_%s' % (chrPos[0],tag):#'%s_A_0.5div'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
+                #print seq_record.seq[int(chrPos[1])-1]
                 return seq_record.seq[int(chrPos[1])-1]
     if haplotype == 'B':
         for seq_record in SeqIO.parse(fasta_A, "fasta"):
-            if seq_record.id =='%s_A'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
+            m = re.search('chr.*?_(.*)', seq_record.id)
+            tag=m.group(1)
+            #print 'tag B:',tag
+            if seq_record.id == '%s_%s' % (chrPos[0],tag):#'%s_A'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
                 return seq_record.seq[int(chrPos[1])-1]    
     
 ########## VCF correct #################   
@@ -188,144 +198,135 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
     unsolved=[]; newUnphasedVariants=[]
     for key1, val1 in vcf1_dict.iteritems():
         GT1_corr=''; found=0
-        for key2, val2 in vcf2_dict.iteritems():
-            #print "hap1",key1, val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
-            #print "hap2",key2, val2.REF, val2.ALT, val2.samples[0]['GT'] #chr1_233407 T [A] 1/1
-            if key1==key2:
-                found01_01=0; found11_11=0; found01_12=0; found12_01=0; found12_12=0
+        #print key1, val1
+        if key1 in vcf2_dict:
+            found01_01=0; found11_11=0; found01_12=0; found12_01=0; found12_12=0
+            #print "\thap1",key1,val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
+            #print "\thap2",key2,vcf2_dict[key1].REF, vcf2_dict[key1].ALT, vcf2_dict[key1].samples[0]['GT'] #chr1_233407 T [A] 1/1
+            if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='0/1': #unphased 
+                #print 'found 0/1-0/1'
+                #print '\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
+                if str(val1.REF) ==str(vcf2_dict[key1].REF) and str(val1.ALT[0])==str(vcf2_dict[key1].ALT[0]):
+                    found01_01=1
+                    #print 'unknown genotype:',str(val1.REF),str(vcf2_dict[key1].REF),str(val1.ALT[0]),str(vcf2_dict[key1].ALT[0])
+                    newUnphasedVariants.append([val1.CHROM, val1.POS])
+                    if ambiguity == '0':
+                        GT1_corr=0                       
+                    if ambiguity == '1':
+                        GT1_corr=1
+                        save_GT(GT1_corr, key1, val1,vcfcorr)
+                        vcfcorr[key1]['alternative']=ambGenotypes01(val1.REF,val1.ALT)#to store an ambiguity code instead of two possibilities
+                    if ambiguity == '2':
+                        res=randomGenotypes01(val1.REF,val1.ALT, randomDict, key1)# to randomly assign one of the two possible ncl                            
+                        if val1.REF!=res[0]:
+                            GT1_corr=1
+                        else:
+                            GT1_corr=0
+                        save_GT(GT1_corr, key1, val1,vcfcorr)
+                        vcfcorr[key1]['alternative']=res[0]
+                        randomDict=res[1]
+                        #print 'results:',val1.REF,val1.ALT, vcf2_dict[key1].REF,vcf2_dict[key1].ALT, vcfcorr[key1]['alternative']
+                if str(val1.REF) ==str(vcf2_dict[key1].ALT[0]) and str(vcf2_dict[key1].REF)==str(val1.ALT[0]): #solved 
+                    found01_01=1
+                    GT1_corr=0
+                    save_GT(GT1_corr, key1, val1,vcfcorr)
+                if found01_01==0 : #unsolved
+                    unsolvedGT+=1
+                    unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='1/1':
                 #print "\thap1",key1,val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
-                #print "\thap2",key2,val2.REF, val2.ALT, val2.samples[0]['GT'] #chr1_233407 T [A] 1/1
-                if val1.samples[0]['GT']=='0/1' and val2.samples[0]['GT']=='0/1': #unphased 
-                    #print 'found 0/1-0/1'
-                    #print '\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
-                    if str(val1.REF) ==str(val2.REF) and str(val1.ALT[0])==str(val2.ALT[0]):
-                        found01_01=1
-                        #print 'unknown genotype:',str(val1.REF),str(val2.REF),str(val1.ALT[0]),str(val2.ALT[0])
-                        newUnphasedVariants.append([val1.CHROM, val1.POS])
-                        if ambiguity == '0':
+                #print "\thap2",key2,vcf2_dict[key1].REF, vcf2_dict[key1].ALT, vcf2_dict[key1].samples[0]['GT'] #chr1_233407 T [A] 1/1
+                if str(val1.ALT[0])==str(vcf2_dict[key1].ALT[0]): #solved
+                    found11_11=1
+                    GT1_corr=1
+                    #print 'found 1/1-1/1'
+                    save_GT(GT1_corr, key1, val1,vcfcorr)
+                if found11_11==0: #unsolved
+                    unsolvedGT+=1
+                    unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='1/2': 
+                #print 'found 0/1-1/2'
+                #print key1,str(val1.REF), str(vcf2_dict[key1].ALT), str(val1.ALT), str(vcf2_dict[key1].ALT) 
+                if str(val1.REF) in str(vcf2_dict[key1].ALT) and str(val1.ALT[0]) in str(vcf2_dict[key1].ALT):
+                    found01_12=1
+                    GT1_corr=0
+                    save_GT(GT1_corr, key1, val1,vcfcorr)
+                    #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
+                if found01_12==0: #unsolved
+                    unsolvedGT+=1
+                    unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='0/1':
+                #print 'found 1/2-0/1'
+                #print key1, str(vcf2_dict[key1].REF), str(val1.ALT), str(vcf2_dict[key1].ALT), str(val1.ALT) #A [A, G] [G] [A, G]
+                if str(vcf2_dict[key1].REF) in str(val1.ALT) and str(vcf2_dict[key1].ALT[0]) in str(val1.ALT): #now the order is reversed compared to 0/1-1/2 
+                    found12_01=1
+                    GT1_corr=1
+                    #print val1.ALT
+                    allele1=[x for x in val1.ALT if x in vcf2_dict[key1].ALT]
+                    allele2=[x for x in val1.ALT if x not in vcf2_dict[key1].ALT]
+                    val1.ALT=[allele1[0],allele2[0]] #reorder the alleles since in save_GT prints the first allele
+                    #print val1.ALT
+                    save_GT(GT1_corr, key1, val1,vcfcorr)
+                    #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
+                if found12_01==0: #unsolved
+                    unsolvedGT+=1
+                    unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='1/2':
+                #print key1, val1.ALT, [str(val1.ALT[0]),str(val1.ALT[1])], vcf2_dict[key1].ALT, [str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])]
+                #print sorted([str(val1.ALT[0]),str(val1.ALT[1])]), sorted([str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])])
+                if sorted([str(val1.ALT[0]),str(val1.ALT[1])]) == sorted([str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])]):#unphased
+                    found12_12=1
+                    #print 'found 1/2-1/2'
+                    newUnphasedVariants.append([val1.CHROM, val1.POS])                        
+                    if ambiguity == '0':
                             GT1_corr=0                       
-                        if ambiguity == '1':
-                            GT1_corr=1
-                            save_GT(GT1_corr, key1, val1,vcfcorr)
-                            vcfcorr[key1]['alternative']=ambGenotypes01(val1.REF,val1.ALT)#to store an ambiguity code instead of two possibilities
-                        if ambiguity == '2':
-                            res=randomGenotypes01(val1.REF,val1.ALT, randomDict, key1)# to randomly assign one of the two possible ncl                            
-                            if val1.REF!=res[0]:
-                                GT1_corr=1
-                            else:
-                                GT1_corr=0
-                            save_GT(GT1_corr, key1, val1,vcfcorr)
-                            vcfcorr[key1]['alternative']=res[0]
-                            randomDict=res[1]
-                            #print 'results:',val1.REF,val1.ALT, val2.REF,val2.ALT, vcfcorr[key1]['alternative']
-                    if str(val1.REF) ==str(val2.ALT[0]) and str(val2.REF)==str(val1.ALT[0]): #solved 
-                        found01_01=1
-                        GT1_corr=0
-                        save_GT(GT1_corr, key1, val1,vcfcorr)
-                    if found01_01==0 : #unsolved
-                        unsolvedGT+=1
-                        unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/1' and val2.samples[0]['GT']=='1/1':
-                    #print "\thap1",key1,val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
-                    #print "\thap2",key2,val2.REF, val2.ALT, val2.samples[0]['GT'] #chr1_233407 T [A] 1/1
-                    if str(val1.ALT[0])==str(val2.ALT[0]): #solved
-                        found11_11=1
+                    if ambiguity == '1':
                         GT1_corr=1
-                        #print 'found 1/1-1/1'
                         save_GT(GT1_corr, key1, val1,vcfcorr)
-                    if found11_11==0: #unsolved
-                        unsolvedGT+=1
-                        unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='0/1' and val2.samples[0]['GT']=='1/2': 
-                    #print 'found 0/1-1/2'
-                    #print key1,str(val1.REF), str(val2.ALT), str(val1.ALT), str(val2.ALT) 
-                    if str(val1.REF) in str(val2.ALT) and str(val1.ALT[0]) in str(val2.ALT):
-                        found01_12=1
-                        GT1_corr=0
-                        save_GT(GT1_corr, key1, val1,vcfcorr)
-                        #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
-                    if found01_12==0: #unsolved
-                        unsolvedGT+=1
-                        unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/2' and val2.samples[0]['GT']=='0/1':
-                    #print 'found 1/2-0/1'
-                    #print key1, str(val2.REF), str(val1.ALT), str(val2.ALT), str(val1.ALT) #A [A, G] [G] [A, G]
-                    if str(val2.REF) in str(val1.ALT) and str(val2.ALT[0]) in str(val1.ALT): #now the order is reversed compared to 0/1-1/2 
-                        found12_01=1
-                        GT1_corr=1
-                        #print val1.ALT
-                        allele1=[x for x in val1.ALT if x in val2.ALT]
-                        allele2=[x for x in val1.ALT if x not in val2.ALT]
-                        val1.ALT=[allele1[0],allele2[0]] #reorder the alleles since in save_GT prints the first allele
-                        #print val1.ALT
-                        save_GT(GT1_corr, key1, val1,vcfcorr)
-                        #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
-                    if found12_01==0: #unsolved
-                        unsolvedGT+=1
-                        unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/2' and val2.samples[0]['GT']=='1/2':
-                    #print key1, val1.ALT, [str(val1.ALT[0]),str(val1.ALT[1])], val2.ALT, [str(val2.ALT[0]),str(val2.ALT[1])]
-                    #print sorted([str(val1.ALT[0]),str(val1.ALT[1])]), sorted([str(val2.ALT[0]),str(val2.ALT[1])])
-                    if sorted([str(val1.ALT[0]),str(val1.ALT[1])]) == sorted([str(val2.ALT[0]),str(val2.ALT[1])]):#unphased
-                        found12_12=1
-                        #print 'found 1/2-1/2'
-                        newUnphasedVariants.append([val1.CHROM, val1.POS])                        
-                        if ambiguity == '0':
-                             GT1_corr=0                       
-                        if ambiguity == '1':
+                        vcfcorr[key1]['alternative']=ambGenotypes(val1.ALT)#to store an ambiguity code instead of two possibilities
+                    if ambiguity == '2':
+                        res=randomGenotypes(val1.ALT, randomDict, key1)# to randomly assign one of the two possible ncl
+                        if val1.REF!=res[0]:
                             GT1_corr=1
-                            save_GT(GT1_corr, key1, val1,vcfcorr)
-                            vcfcorr[key1]['alternative']=ambGenotypes(val1.ALT)#to store an ambiguity code instead of two possibilities
-                        if ambiguity == '2':
-                            res=randomGenotypes(val1.ALT, randomDict, key1)# to randomly assign one of the two possible ncl
-                            if val1.REF!=res[0]:
-                                GT1_corr=1
-                            else:
-                                GT1_corr=0
-                            save_GT(GT1_corr, key1, val1,vcfcorr)
-                            vcfcorr[key1]['alternative']=res[0]
-                            randomDict=res[1]
-                            #print key1, val1.REF,val1.ALT                            
-                    if found12_12==0 : #unsolved
-                        unsolvedGT+=1
-                        unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='0/1' and val2.samples[0]['GT']=='1/1':
-                    #print 'found 0/1-1/1 -> No biological meaning'
+                        else:
+                            GT1_corr=0
+                        save_GT(GT1_corr, key1, val1,vcfcorr)
+                        vcfcorr[key1]['alternative']=res[0]
+                        randomDict=res[1]
+                        #print key1, val1.REF,val1.ALT                            
+                if found12_12==0 : #unsolved
                     unsolvedGT+=1
                     unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/1' and val2.samples[0]['GT']=='0/1':
-                    #print 'found 1/1-0/1 -> No biological meaning'
-                    unsolvedGT+=1
-                    unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/1' and val2.samples[0]['GT']=='1/2':
-                    #print 'found 1/1-1/2 -> No biological meaning'
-                    unsolvedGT+=1
-                    unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break
-                if val1.samples[0]['GT']=='1/2' and val2.samples[0]['GT']=='1/1':
-                    #print 'found 1/2-1/1 -> No biological meaning'
-                    unsolvedGT+=1
-                    unsolved.append([val1.CHROM, val1.POS])
-                    found=1
-                    break                    
+                found=1
+            if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='1/1':
+                #print 'found 0/1-1/1 -> No biological meaning'
+                unsolvedGT+=1
+                unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='0/1':
+                #print 'found 1/1-0/1 -> No biological meaning'
+                unsolvedGT+=1
+                unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='1/2':
+                #print 'found 1/1-1/2 -> No biological meaning'
+                unsolvedGT+=1
+                unsolved.append([val1.CHROM, val1.POS])
+                found=1
+            if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='1/1':
+                #print 'found 1/2-1/1 -> No biological meaning'
+                unsolvedGT+=1
+                unsolved.append([val1.CHROM, val1.POS])
+                found=1
+        #move intend         
         if val1.samples[0]['GT']=='1/1' and found==0:
             found11_NoSNP=0
             #print 'found 1/1-NoSNP', key1
+            #print getRefNcl(key1, haplotype)
             if getRefNcl(key1, haplotype)==val1.ALT[0]: #solved
                 found11_NoSNP=1
                 GT1_corr=1
@@ -333,16 +334,18 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
             if found11_NoSNP==0 : #unsolved
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])               
-        if val1.samples[0]['GT']=='0/1' and found==0: #val1.samples[0]['GT']=='0/1' and no SNP in val2; biologically not possible, is the results of the filtering
+        if val1.samples[0]['GT']=='0/1' and found==0: #val1.samples[0]['GT']=='0/1' and no SNP in vcf2_dict[key1]; biologically not possible, is the results of the filtering
             #print 'found 0/1-NoSNP -> No biological meaning!'
             unsolvedGT+=1
             unsolved.append([val1.CHROM, val1.POS])
-        if val1.samples[0]['GT']=='1/2' and found==0: #val1.samples[0]['GT']=='1/2' and no SNP in val2; biologically not possible, is the results of the filtering
+        if val1.samples[0]['GT']=='1/2' and found==0: #val1.samples[0]['GT']=='1/2' and no SNP in vcf2_dict[key1]; biologically not possible, is the results of the filtering
             #print 'found 1/2-NoSNP -> No biological meaning!'
             unsolvedGT+=1
             unsolved.append([val1.CHROM, val1.POS])
     #print '\tthe number of SNPs with unsolved genotypes (1/2-NoSNP; 0/1-NoSNP) is: %s' % unsolvedGT
-
+#    for k,v in vcfcorr.iteritems():
+#        print k
+#    print len(vcfcorr)      
     return [vcfcorr,randomDict,unsolved,newUnphasedVariants]  #I need to return randomDict
 ##########################################
 

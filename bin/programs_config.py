@@ -12,16 +12,17 @@ from programs_config import program_path
 #Please set the correct path for each program
 path = {}
 
-path["haplotypo"] = "~/src/haplotypo/bin/"
-path["java"] = "java" 
-path["bwa"] = "~/src/haplotypo/dependencies/bwa-0.7.15/bwa" 
-path["samtools"] = "~/src/haplotypo/dependencies/samtools-1.9/samtools" 
-path["picard"] = "~/src/haplotypo/dependencies/gatk-4.0.12.0/gatk"
-path["gatk"] = "~/src/haplotypo/dependencies/gatk-4.0.12.0/gatk-package-4.0.12.0-local.jar" 
-path["freebayes"] = "~/src/haplotypo/dependencies/freebayes/bin/freebayes "
-path["bcftools"] = "~/src/haplotypo/dependencies/bcftools-1.9/bcftools" 
-path["vcffilter"] = "~/src/haplotypo/dependencies/vcflib/bin/vcffilter"
+path["haplotypo"] = "~/users/tg/vdepinho/Candida_albicans/technical_analysis/Xpipeline/"
+path["java"] = "/usr/bin/java" 
+path["bwa"] = "~/users/tg/vdepinho/Programs/bwa/bwa-0.7.15/bwa" 
+path["samtools"] = "~/users/tg/vdepinho/Programs/samtools/version1.9/samtools-1.9/samtools" 
+path["picard"] = "~/users/tg/vdepinho/Programs/GATK/GATK_v4.01/gatk-4.0.2.1/gatk "
+path["gatk"] = "~/users/tg/vdepinho/Programs/GATK/GATK_v4.01/gatk-4.0.2.1/gatk-package-4.0.2.1-local.jar" 
+path["freebayes"] = "~/users/tg/lcarrete/src/freebayes/bin/freebayes "
+path["bcftools"] = "~/users/tg/vdepinho/Programs/samtools/version1.9/bcftools-1.9/bcftools" 
+path["vcffilter"] = "~/users/tg/cpegueroles/soft/vcflib/bin/vcffilter"
 
+	
 def program_path(program):
 	return path[program]
 
