@@ -1,3 +1,3 @@
 This folder contains a data set to run haploTypo. The whole pipeline can be run using the following command:
 
-python haplotypo.py -o ./ -amb 0 -hapA A.chr7.fa -hapB B.chr7.fa -idA A_AB -idB B_AB -f1 AB.chr7.1.fq.gz -f2 AB.chr7.2.fq.gz -caller GATK
+python haplotypo.py -o ./ -amb 1 -hapA A.chr6.fa -hapB B.chr6.fa -idA A_AB -idB B_AB -f1 AB.chr6.1.fq.gz -f2 AB.chr6.2.fq.gz -caller GATK
