@@ -10,12 +10,14 @@ CRG (Barcelona)
 import argparse
 import os
 import sys
-import ConfigParser
+import configparser
 from programs_config import program_path
 
 #Setting the correct path for each program
 haplotypo = program_path("haplotypo")
-
+if program_path("python") == None:
+	sys.exit("ERROR!! Please revise the Python path parameters!")
+python_path = program_path("python")
 
 ##############
 #### MAIN ####
@@ -63,25 +65,25 @@ caller = str(args.caller)
 #### All pipeline ####
 ######################
 if fastq1 != "None" and fastq2 != "None" and bamA == "None" and bamB == "None":
-	os.system("python " + haplotypo + "mapping.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA  + " -idB " + tagName_hapB + " -f1 " + fastq1 + " -f2 " + fastq2)
-	os.system("python " + haplotypo + "var_calling.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA + " -idB " + tagName_hapB + " -bA " + outDir + "/" + tagName_hapA + ".mkd.bam " + " -bB " + outDir + "/" + tagName_hapB + ".mkd.bam " + " -c " + coverage + " -caller " + caller + " -p 2")
+	os.system(python_path+" " + haplotypo + "mapping.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA  + " -idB " + tagName_hapB + " -f1 " + fastq1 + " -f2 " + fastq2)
+	os.system(python_path+" " + haplotypo + "var_calling.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA + " -idB " + tagName_hapB + " -bA " + outDir + "/" + tagName_hapA + ".mkd.bam " + " -bB " + outDir + "/" + tagName_hapB + ".mkd.bam " + " -c " + coverage + " -caller " + caller + " -p 2")
 	if coord == "None":
-		os.system("python " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb) 
+		os.system(python_path+" " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb) 
 	else:
-		os.system("python " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb + " -coor " + coord) 
-	os.system("python " + haplotypo + "haplomaker.py -o " + outDir + " -hapA " + hapA + " -hapB " + hapB + " -corrA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -corrB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf") 
+		os.system(python_path+" " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb + " -coor " + coord) 
+	os.system(python_path+" " + haplotypo + "haplomaker.py -o " + outDir + " -hapA " + hapA + " -hapB " + hapB + " -corrA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -corrB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf") 
 
 
 ######################################
 #### Only from variant calling on ####
 ######################################
 elif fastq1 == "None" and fastq2 == "None" and bamA != "None" and bamB != "None":
-	os.system("python " + haplotypo + "var_calling.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA + " -idB " + tagName_hapB + " -bA " + bamA + " -bB " + bamB + " -c " + coverage + " -caller " + caller + " -p 2")
+	os.system(python_path+" " + haplotypo + "var_calling.py -o " + outDir + " -thr " + numberthr + " -hapA " + hapA + " -hapB " + hapB + " -idA " + tagName_hapA + " -idB " + tagName_hapB + " -bA " + bamA + " -bB " + bamB + " -c " + coverage + " -caller " + caller + " -p 2")
 	if coord == "None":
-		os.system("python " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb) 
+		os.system(python_path+" " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb) 
 	else:
-		os.system("python " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb + " -coor " + coord) 
-	os.system("python " + haplotypo + "haplomaker.py -o " + outDir + " -hapA " + hapA + " -hapB " + hapB + " -corrA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -corrB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf") 
+		os.system(python_path+" " + haplotypo + "VCFcorr_alleles.py -A " + outDir + "/" + tagName_hapA + ".pass.snp.vcf" + " -B " + outDir + "/" + tagName_hapB + ".pass.snp.vcf" + " -fastaA " + hapA + " -fastaB " + hapB + " -cA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -cB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf" + " -amb " + amb + " -coor " + coord) 
 
+	os.system(python_path+" " + haplotypo + "haplomaker.py -o " + outDir + " -hapA " + hapA + " -hapB " + hapB + " -corrA " + outDir + "/" + tagName_hapA + ".corrected" + "_amb" + amb + ".vcf" + " -corrB " + outDir + "/" + tagName_hapB + ".corrected" + "_amb" + amb + ".vcf") 
 else:
-	print "ERROR!! Please revise the fastq or bam parameters!"
+	print("ERROR!! Please revise the fastq or bam parameters!")
