@@ -166,7 +166,7 @@ dep_folder=/home/dependencies
 PATH="$dep_folder/samtools-1.9/:${PATH}"
 PATH="$dep_folder/bcftools-1.9/:${PATH}"
 PATH="$dep_folder/bwa-0.7.15/:${PATH}"
-echo 'alias haplotypo="python $(pwd)/bin/haplotypo.py"' >> ~/.bashrc
+echo 'alias haplotypo="python $(pwd)/bin/3.5/haplotypo.py"' >> ~/.bashrc
 
 apt-get clean
 set -x; rm -rf /var/lib/apt/lists/*
