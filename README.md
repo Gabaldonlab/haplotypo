@@ -1,10 +1,8 @@
-This repository has the Haplotypo.
+This repository contains the Haplotypo pipeline.
 
-This pipeline is still under development.
+HaploTypo is a pipeline suited to map variants into haplotypes in genetic variation analyses. After mapping and variant calling on a phased reference genome, HaploTypo infers the haplotype correspondence for each heterozygous variant. It also generates two independent FASTA files for each reconstructed haplotype.
 
-Haplotypo aims to do read mapping and variant calling on phased genomes, without loosing phasing information. In the end the corrected haplotypes are provided.
-
-The different scripts represent:
+Scripts contained in this repository:
 1) mapping.py -> pipeline for read mapping with BWA-MEM
 2) var_calling.py -> pipeline for SNP calling using one of the programs: GATK, bcftools or freebayes
 3) VCFcorr_alleles.py -> script for to find the correspondence of SNPs between the two haplotypes and output a corrected VCF (only SNPs that actually belong to this haplotype)
