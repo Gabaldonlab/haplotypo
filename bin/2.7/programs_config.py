@@ -12,7 +12,7 @@ from programs_config import program_path
 #Please set the correct path for each program
 path = {}
 
-path["haplotypo"] = "~/src/haplotypo/bin/"
+path["haplotypo"] = "~/src/haplotypo/bin/2.7/"
 path["java"] = "java" 
 path["bwa"] = "~/src/haplotypo/dependencies/bwa-0.7.15/bwa" 
 path["samtools"] = "~/src/haplotypo/dependencies/samtools-1.9/samtools" 

@@ -123,7 +123,7 @@ def GATK(reference, outdir, tag, threads, cov, b, p):
 	print("\n", "Variant calling is done.")
 
 
-#3. Variant calling with samtools -> We are missing separate SNPs and get the PASS file
+#3. Variant calling with samtools
 def BCFTOOLS(reference, outdir, tag, threads, cov, b, p):
 	print("Running Bcftools mpileup...")
 	#A minimum mapping quality of 20 is being required (this is not default parameter but we want to reduce the chance of errors

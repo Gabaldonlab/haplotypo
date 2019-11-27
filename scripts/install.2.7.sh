@@ -153,7 +153,6 @@ wget https://github.com/broadinstitute/gatk/releases/download/$GATK_VERSION/gatk
 unzip gatk-$GATK_VERSION.zip
 
 echo "Installing Python packages"
-# pip install --upgrade pip
 python -m pip install --upgrade pip
 pip install numpy
 pip install biopython

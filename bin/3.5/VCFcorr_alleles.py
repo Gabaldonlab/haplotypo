@@ -6,7 +6,7 @@ Created on Wed Jul 11 12:45:14 2018
 """
 #sudo pip install pyvcf
 
-import argparse, vcf, re, random, sys,os
+import argparse, pyvcf, re, random, sys,os
 from Bio import SeqIO
 
 parser = argparse.ArgumentParser(description="Pipeline to obtain corrected VCF files for haplotypes A and B from their filtered VCFs. It requires pyVCF. WARNING: chromosome Id must be /(chr.*?)_.*/; ex: chrRA")
@@ -60,7 +60,7 @@ def parse_vcf_header(VCF_raw,VCF_corr,ambiguity): #parse header and print the in
 ########## VCF read if coordinates table is NOT provided #################
 def read_vcf(VCF_raw):
     vcf_dict={}
-    vcf_reader = vcf.Reader(open(VCF_raw, 'r'))
+    vcf_reader = pyvcf.Reader(open(VCF_raw, 'r'))
     for record in vcf_reader:
         #print record.CHROM,record.POS,record.ID,record.REF,record.ALT,record.QUAL,record.FILTER,record.INFO,record.samples
         m = re.search('(chr.*?)_.*', record.CHROM)
@@ -79,7 +79,7 @@ def read_vcf(VCF_raw):
 ########## VCF read if coordinates table is provided #################
 def read_vcfDiffCoord(VCF_raw,haplotype, coord): ####new
     vcf_dict={}
-    vcf_reader = vcf.Reader(open(VCF_raw, 'r'))
+    vcf_reader = pyvcf.Reader(open(VCF_raw, 'r'))
     for record in vcf_reader:
         m = re.search('(chr.*?)_.*', record.CHROM)
         mychr=m.group(1)
