@@ -34,8 +34,7 @@ if ambiguity != '0' and ambiguity != '1' and ambiguity != '2':
     sys.exit("\tWARNING! Please check your --amb option, should be 0, 1 or 2")
         
 ########## parse VCF header ############
-#parse header and print the info in the output file
-def parse_vcf_header(VCF_raw,VCF_corr,ambiguity):
+def parse_vcf_header(VCF_raw,VCF_corr,ambiguity): #parse header and print the info in the output file
     VCF_rawFH = open(VCF_raw, 'r')
     for line in VCF_rawFH:
         line = line.rstrip()
@@ -78,21 +77,10 @@ def read_vcf(VCF_raw):
     return vcf_dict
     
 ########## VCF read if coordinates table is provided #################
-def read_vcfDiffCoord(VCF_raw,haplotype):
-    if coordinatesTable:
-        coord=[]
-        for line in open(coordinatesTable, 'r'):
-            line = line.rstrip().split('\t')
-            m = re.search('(chr.*?)_.*', line[0])
-            chrA=m.group(1)
-            m = re.search('(chr.*?)_.*', line[1])
-            chrB=m.group(1)
-            coord.append([chrA,chrB,line[2],line[3]]) #to save the coordinates in a list of lists
-
+def read_vcfDiffCoord(VCF_raw,haplotype, coord): ####new
     vcf_dict={}
     vcf_reader = vcf.Reader(open(VCF_raw, 'r'))
     for record in vcf_reader:
-        #print record.CHROM,record.POS,record.ID,record.REF,record.ALT,record.QUAL,record.FILTER,record.INFO,record.samples
         m = re.search('(chr.*?)_.*', record.CHROM)
         mychr=m.group(1)
         newPos=int()
@@ -104,7 +92,13 @@ def read_vcfDiffCoord(VCF_raw,haplotype):
                     found=1
             key= "%s_%s" % (mychr,newPos)
         if found ==0:
-            print("\tplease check your coordinated file, position %s is missing!" % record.POS)
+            #for positions in hapA with no correspondance in the coordinates table it recodes to position + length of the chr
+            #the reason is that this certain position in A can exist in B depite not being its correspondance
+            print("\tWARNING: please check your coordinated file, position %s from chromosome %s is missing!" % (record.POS,m.group(0)))
+            for fasta in SeqIO.parse(fasta_A, "fasta"):
+                if fasta.id == '%s_A' %m.group(1):
+                   mylen=len(fasta.seq)
+            key= "%s_%s" % (mychr,(int(record.POS)+int(mylen)))
         val= record
         if not key in vcf_dict:
             vcf_dict[key]=val
@@ -178,38 +172,27 @@ def getRefNcl(key1,haplotype):
         for seq_record in SeqIO.parse(fasta_B, "fasta"):
             m = re.search('chr.*?_(.*)', seq_record.id)
             tag=m.group(1)
-            #print 'tag A:',tag
-            if seq_record.id == '%s_%s' % (chrPos[0],tag):#'%s_A_0.5div'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
-                #print seq_record.seq[int(chrPos[1])-1]
+            if seq_record.id == '%s_%s' % (chrPos[0],tag): #get the chromosome from the haplotype that do not have SNPs annotated
                 return seq_record.seq[int(chrPos[1])-1]
     if haplotype == 'B':
         for seq_record in SeqIO.parse(fasta_A, "fasta"):
             m = re.search('chr.*?_(.*)', seq_record.id)
             tag=m.group(1)
-            #print 'tag B:',tag
             if seq_record.id == '%s_%s' % (chrPos[0],tag):#'%s_A'% chrPos[0]: #get the chromosome from the haplotype that do not have SNPs annotated
                 return seq_record.seq[int(chrPos[1])-1]    
     
 ########## VCF correct #################   
-def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
+def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype, coord):
     vcfcorr={}
     unsolvedGT=0
-
-    #print randomDict
     unsolved=[]; newUnphasedVariants=[]
     for key1, val1 in vcf1_dict.items():
         GT1_corr=''; found=0
-        #print key1, val1
         if key1 in vcf2_dict:
             found01_01=0; found11_11=0; found01_12=0; found12_01=0; found12_12=0
-            #print "\thap1",key1,val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
-            #print "\thap2",key2,vcf2_dict[key1].REF, vcf2_dict[key1].ALT, vcf2_dict[key1].samples[0]['GT'] #chr1_233407 T [A] 1/1
             if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='0/1': #unphased 
-                #print 'found 0/1-0/1'
-                #print '\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
                 if str(val1.REF) ==str(vcf2_dict[key1].REF) and str(val1.ALT[0])==str(vcf2_dict[key1].ALT[0]):
                     found01_01=1
-                    #print 'unknown genotype:',str(val1.REF),str(vcf2_dict[key1].REF),str(val1.ALT[0]),str(vcf2_dict[key1].ALT[0])
                     newUnphasedVariants.append([val1.CHROM, val1.POS])
                     if ambiguity == '0':
                         GT1_corr=0                       
@@ -226,7 +209,6 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
                         save_GT(GT1_corr, key1, val1,vcfcorr)
                         vcfcorr[key1]['alternative']=res[0]
                         randomDict=res[1]
-                        #print 'results:',val1.REF,val1.ALT, vcf2_dict[key1].REF,vcf2_dict[key1].ALT, vcfcorr[key1]['alternative']
                 if str(val1.REF) ==str(vcf2_dict[key1].ALT[0]) and str(vcf2_dict[key1].REF)==str(val1.ALT[0]): #solved 
                     found01_01=1
                     GT1_corr=0
@@ -236,8 +218,6 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
                     unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='1/1':
-                #print "\thap1",key1,val1.REF, val1.ALT, val1.samples[0]['GT'] #chr1_233407 T [A] 0/1
-                #print "\thap2",key2,vcf2_dict[key1].REF, vcf2_dict[key1].ALT, vcf2_dict[key1].samples[0]['GT'] #chr1_233407 T [A] 1/1
                 if str(val1.ALT[0])==str(vcf2_dict[key1].ALT[0]): #solved
                     found11_11=1
                     GT1_corr=1
@@ -247,41 +227,30 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
                     unsolvedGT+=1
                     unsolved.append([val1.CHROM, val1.POS])
                 found=1
-            if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='1/2': 
-                #print 'found 0/1-1/2'
-                #print key1,str(val1.REF), str(vcf2_dict[key1].ALT), str(val1.ALT), str(vcf2_dict[key1].ALT) 
+            if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='1/2':  
                 if str(val1.REF) in str(vcf2_dict[key1].ALT) and str(val1.ALT[0]) in str(vcf2_dict[key1].ALT):
                     found01_12=1
                     GT1_corr=0
                     save_GT(GT1_corr, key1, val1,vcfcorr)
-                    #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
                 if found01_12==0: #unsolved
                     unsolvedGT+=1
                     unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='0/1':
-                #print 'found 1/2-0/1'
-                #print key1, str(vcf2_dict[key1].REF), str(val1.ALT), str(vcf2_dict[key1].ALT), str(val1.ALT) #A [A, G] [G] [A, G]
                 if str(vcf2_dict[key1].REF) in str(val1.ALT) and str(vcf2_dict[key1].ALT[0]) in str(val1.ALT): #now the order is reversed compared to 0/1-1/2 
                     found12_01=1
                     GT1_corr=1
-                    #print val1.ALT
                     allele1=[x for x in val1.ALT if x in vcf2_dict[key1].ALT]
                     allele2=[x for x in val1.ALT if x not in vcf2_dict[key1].ALT]
                     val1.ALT=[allele1[0],allele2[0]] #reorder the alleles since in save_GT prints the first allele
-                    #print val1.ALT
                     save_GT(GT1_corr, key1, val1,vcfcorr)
-                    #print '\t\t%s, %s, %s, %s, %s' %(val1.CHROM, val1.POS,val1.REF,val1.ALT[0],GT1_corr)
                 if found12_01==0: #unsolved
                     unsolvedGT+=1
                     unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='1/2':
-                #print key1, val1.ALT, [str(val1.ALT[0]),str(val1.ALT[1])], vcf2_dict[key1].ALT, [str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])]
-                #print sorted([str(val1.ALT[0]),str(val1.ALT[1])]), sorted([str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])])
                 if sorted([str(val1.ALT[0]),str(val1.ALT[1])]) == sorted([str(vcf2_dict[key1].ALT[0]),str(vcf2_dict[key1].ALT[1])]):#unphased
                     found12_12=1
-                    #print 'found 1/2-1/2'
                     newUnphasedVariants.append([val1.CHROM, val1.POS])                        
                     if ambiguity == '0':
                             GT1_corr=0                       
@@ -297,75 +266,103 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype):
                             GT1_corr=0
                         save_GT(GT1_corr, key1, val1,vcfcorr)
                         vcfcorr[key1]['alternative']=res[0]
-                        randomDict=res[1]
-                        #print key1, val1.REF,val1.ALT                            
+                        randomDict=res[1]                          
                 if found12_12==0 : #unsolved
                     unsolvedGT+=1
                     unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='0/1' and vcf2_dict[key1].samples[0]['GT']=='1/1':
-                #print 'found 0/1-1/1 -> No biological meaning'
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='0/1':
-                #print 'found 1/1-0/1 -> No biological meaning'
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/1' and vcf2_dict[key1].samples[0]['GT']=='1/2':
-                #print 'found 1/1-1/2 -> No biological meaning'
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])
                 found=1
             if val1.samples[0]['GT']=='1/2' and vcf2_dict[key1].samples[0]['GT']=='1/1':
-                #print 'found 1/2-1/1 -> No biological meaning'
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])
-                found=1
-        #move intend         
+                found=1       
+                
         if val1.samples[0]['GT']=='1/1' and found==0:
             found11_NoSNP=0
-            #print 'found 1/1-NoSNP', key1
-            #print getRefNcl(key1, haplotype)
-            if getRefNcl(key1, haplotype)==val1.ALT[0]: #solved
-                found11_NoSNP=1
-                GT1_corr=1
-                save_GT(GT1_corr, key1, val1,vcfcorr)
-            if found11_NoSNP==0 : #unsolved
+            key1old=''; positionFoundinCoorTablB=0; positionCheckA=0
+            m = re.search('(chr.*?)_(.*)', key1) 
+            if ctable==0:
+                if getRefNcl(key1, haplotype)==val1.ALT[0]: #solved
+                    found11_NoSNP=1
+                    GT1_corr=1
+                    save_GT(GT1_corr, key1, val1,vcfcorr)
+            if ctable==1 and haplotype=='B':  #to check which position get from haplotype A 
+                key1old=key1
+                positionFoundinCoorTablB=1
+                for x in coord:
+                    if m.group(1)==x[1] and m.group(2)==x[3]:
+                        key1='%s_%s' %(x[1],x[2])
+                        positionFoundinCoorTablB=2
+            for record in SeqIO.parse(fasta_A, "fasta"):
+                if record.id == '%s_A' %m.group(1):
+                   mylen=record.seq
+            if ctable==1 and haplotype=='A': 
+                key1old=key1
+                positionCheckA=1
+                if int(m.group(2)) <= int(len(mylen)): 
+                    positionCheckA=2 
+            if positionCheckA==2 or positionFoundinCoorTablB==2:
+                if getRefNcl(key1, haplotype)==val1.ALT[0]: #solved
+                    found11_NoSNP=1
+                    GT1_corr=1
+                    save_GT(GT1_corr, key1old, val1,vcfcorr)
+            if positionCheckA==1 or positionFoundinCoorTablB==1:
+                    found11_NoSNP=1
+                    GT1_corr=1
+                    save_GT(GT1_corr, key1old, val1,vcfcorr)
+            if found11_NoSNP==0 :
                 unsolvedGT+=1
                 unsolved.append([val1.CHROM, val1.POS])               
         if val1.samples[0]['GT']=='0/1' and found==0: #val1.samples[0]['GT']=='0/1' and no SNP in vcf2_dict[key1]; biologically not possible, is the results of the filtering
-            #print 'found 0/1-NoSNP -> No biological meaning!'
             unsolvedGT+=1
             unsolved.append([val1.CHROM, val1.POS])
         if val1.samples[0]['GT']=='1/2' and found==0: #val1.samples[0]['GT']=='1/2' and no SNP in vcf2_dict[key1]; biologically not possible, is the results of the filtering
-            #print 'found 1/2-NoSNP -> No biological meaning!'
             unsolvedGT+=1
-            unsolved.append([val1.CHROM, val1.POS])
-    #print '\tthe number of SNPs with unsolved genotypes (1/2-NoSNP; 0/1-NoSNP) is: %s' % unsolvedGT
-#    for k,v in vcfcorr.iteritems():
-#        print k
-#    print len(vcfcorr)      
+            unsolved.append([val1.CHROM, val1.POS])  
+            
     return [vcfcorr,randomDict,unsolved,newUnphasedVariants]  #I need to return randomDict
 ##########################################
 
 ######## to read the raw VCF files ##################################
+coord=[]
 if args.coordinatesTable is 'None':
     print("\n\tcoordinates table is NOT provided")
     vcfA_dict= read_vcf(VCF_rawA)
     vcfB_dict= read_vcf(VCF_rawB)
+    ctable=0 
+
 else:
     print("\n\tcoordinates table IS provided")
     coordinatesTable= str(args.coordinatesTable)
-    vcfA_dict= read_vcfDiffCoord(VCF_rawA,'A')
+    for line in open(coordinatesTable, 'r'):
+        line = line.rstrip().split('\t')
+        m = re.search('(chr.*?)_.*', line[0])
+        chrA=m.group(1)
+        m = re.search('(chr.*?)_.*', line[1]) 
+        chrB=m.group(1)
+        coord.append([chrA,chrB,line[2],line[3]]) #to save the coordinates in a list of lists 
+
+    vcfA_dict= read_vcfDiffCoord(VCF_rawA,'A',coord) 
     vcfB_dict= read_vcf(VCF_rawB)
+    ctable=1 
+
 
 randomDict={} #to initialize randomDict
 
 ######## to obtain and print corrected VCF from haplotype A ##################################
 print('\n\thaplotype A')
-res= VCF_corr(vcfA_dict,vcfB_dict,randomDict,'A') #obtain the corrected VCF; WARNING: the order of the dic is important!!
+res= VCF_corr(vcfA_dict,vcfB_dict,randomDict,'A', coord) #obtain the corrected VCF; WARNING: the order of the dic is important!! ####new
 vcfA_corr_dict=res[0]
 randomDict=res[1]
 unsolvedA=res[2]
@@ -397,13 +394,11 @@ for x in sorted(myList, key = lambda x: (x[0], int(x[1]))):
     
 print('\tnumber of SNPs in haplotype A:', len(vcfA_dict)) #.pass.snp.vcf
 print('\t\tnumber of corrected SNPs (solved + unphased (-amb1,-amb2)):',len(vcfA_corr_dict))
-#print '\t\tnumber of unambigously solved:',len(vcfA_corr_dict)-len(unphasedA) 
-#print '\t\tnumber of unphased:',len(unphasedA)
 print('\t\tnumber of unsolved:', len(unsolvedA))
 
 ######## to obtain and print corrected VCF from haplotype B ##################################
 print('\n\thaplotype B')
-res= VCF_corr(vcfB_dict,vcfA_dict,randomDict,'B') #obtain the corrected VCF; WARNING: the order of the dic is important!!
+res= VCF_corr(vcfB_dict,vcfA_dict,randomDict,'B', coord) #obtain the corrected VCF; WARNING: the order of the dic is important!! ####new
 vcfB_corr_dict=res[0]
 randomDict=res[1]
 unsolvedB=res[2]
@@ -434,6 +429,4 @@ for x in sorted(myList, key = lambda x: (x[0], int(x[1]))):
 
 print('\tnumber of SNPs in haplotype B:' , len(vcfB_dict)) #.pass.snp.vcf
 print('\t\tnumber of corrected SNPs (solved + unphased (-amb1,-amb2)):',len(vcfB_corr_dict))
-#print '\t\tnumber of unambigously solved:',len(vcfB_corr_dict)-len(unphasedB) 
-#print '\t\tnumber of unphased:',len(unphasedB)
 print('\t\tnumber of unsolved:', len(unsolvedB))

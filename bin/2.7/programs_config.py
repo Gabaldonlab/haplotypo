@@ -21,7 +21,7 @@ path["gatk"] = "~/src/haplotypo/dependencies/gatk-4.0.12.0/gatk-package-4.0.12.0
 path["freebayes"] = "~/src/haplotypo/dependencies/freebayes/bin/freebayes "
 path["bcftools"] = "~/src/haplotypo/dependencies/bcftools-1.9/bcftools" 
 path["vcffilter"] = "~/src/haplotypo/dependencies/vcflib/bin/vcffilter"
-path["python"] = "python3" 
+path["python"] = "python" 
 	
 def program_path(program):
 	if program not in path:
