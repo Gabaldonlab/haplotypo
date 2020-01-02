@@ -88,9 +88,10 @@ def read_vcfDiffCoord(VCF_raw,haplotype, coord): ####new
         if haplotype=='A':
             for x in coord:
                 if x[0]==mychr and int(x[2])==int(record.POS):
+                    newchr=x[1]
                     newPos=x[3]
                     found=1
-            key= "%s_%s" % (mychr,newPos)
+            key= "%s_%s" % (newchr,newPos)
         if found ==0:
             #for positions in hapA with no correspondance in the coordinates table it recodes to position + length of the chr
             #the reason is that this certain position in A can exist in B depite not being its correspondance
@@ -302,7 +303,7 @@ def VCF_corr(vcf1_dict,vcf2_dict,randomDict,haplotype, coord):
                 positionFoundinCoorTablB=1
                 for x in coord:
                     if m.group(1)==x[1] and m.group(2)==x[3]:
-                        key1='%s_%s' %(x[1],x[2])
+                        key1='%s_%s' %(x[0],x[2]) 
                         positionFoundinCoorTablB=2
             for record in SeqIO.parse(fasta_A, "fasta"):
                 if record.id == '%s_A' %m.group(1):
