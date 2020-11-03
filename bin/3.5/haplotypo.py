@@ -24,6 +24,7 @@ python_path = program_path("python")
 ##############
 
 parser = argparse.ArgumentParser(description="Read mapping and variant calling on phased genomes with correction for variants and haplotype reconstruction.")
+parser.add_argument("-v", "--version", dest="version",   default=False, action="store_true", help="verbose")
 parser.add_argument("-o", "--outdir", dest="outDir", action="store", help="Directory where the data will be stored")
 parser.add_argument("-thr", "--threads", dest="threads", default="8", help="Number of threads [8]")
 parser.add_argument("-c", "--coverage", dest="coverage", default="30", help="Minimum coverage necessary for variant calling [30]")
@@ -40,7 +41,6 @@ parser.add_argument("-caller", "--variant_caller", dest="caller", default="GATK"
 parser.add_argument("-coor", "--coordinatesTable", dest="coordinatesTable", default="None", help="Coordinates table. Required only if the two copies of each chromosome do not have a 1-to-1 position correspondence. Format: tab separated table with chr_hapA\tchr_HapB\tpositionA\tpositionB; ex: Ca22chrRA    Ca22chrRB    1    3")
 
 args = parser.parse_args()
-
 
 #############
 #### TAG ####
@@ -60,6 +60,16 @@ amb = str(args.ambiguity)
 bamA = str(args.bamfileA)
 bamB = str(args.bamfileB)
 caller = str(args.caller)
+
+o = parser.parse_args()
+if o.version:
+	version = """Haplotypo v1.0.1 by Gabaldonlab\n\n
+http://github.com/Gabaldonlab/haplotypo
+This software is donated to the public domain
+Please cite: Pegueroles C. et. al. Bioinformatics 36(8)2569-2571\n\n"""
+	sys.stderr.write("{}".format(version))
+	sys.exit(0)
+
 
 ######################
 #### All pipeline ####
