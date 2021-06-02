@@ -13,8 +13,8 @@ parser = argparse.ArgumentParser(description="Pipeline to obtain corrected VCF f
 
 parser.add_argument("-A", "--VCF_A", dest="VCF_A", required=True, help="VCF with PASS SNPs obtained after running a variant caller using HapA as reference")
 parser.add_argument("-B", "--VCF_B", dest="VCF_B", required=True, help="VCF with PASS SNPs obtained after running a variant caller using HapB as reference")
-parser.add_argument("-fastaA", "--fasta_A", dest="fasta_A", required=True, help="Fasta with HapA used as reference for variant calling")
-parser.add_argument("-fastaB", "--fasta_B", dest="fasta_B", required=True, help="Fasta with HapB used as reference for variant calling")
+parser.add_argument("-fastaA", "--fasta_A", dest="fasta_A", required=True, help="Fasta with HapA used as reference for variant calling. Warning: the name of each chromosome should be chr*_A")")
+parser.add_argument("-fastaB", "--fasta_B", dest="fasta_B", required=True, help="Fasta with HapB used as reference for variant calling. Warning: the name of each chromosome should be chr*_B")")
 parser.add_argument("-cA", "--VCF_corrA", dest="VCF_corrA", required=True, help="Out file for the corrected VCF A")
 parser.add_argument("-cB", "--VCF_corrB", dest="VCF_corrB", required=True, help="Out file for the corrected VCF B")
 parser.add_argument("-amb", "--ambiguity", dest="ambiguity", required=True, help="Define how to proceed with ambiguous genotypes-> 0: no print; 1: print ambiguity codes; 2: randomly assign a ncl")
