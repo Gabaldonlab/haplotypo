@@ -6,7 +6,7 @@ Created on Wed Jul 11 12:45:14 2018
 """
 #sudo pip install pyvcf
 
-import argparse, pyvcf, re, random, sys,os
+import argparse, vcf, re, random, sys,os
 from Bio import SeqIO
 
 parser = argparse.ArgumentParser(description="Pipeline to obtain corrected VCF files for haplotypes A and B from their filtered VCFs. It requires pyVCF. WARNING: chromosome Id must be /(chr.*?)_.*/; ex: chrRA")
